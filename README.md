@@ -1,2 +1,2 @@
 # IRLS
-IRLS ... Image Run Length Search (いるす)
+IRLS ... Image Run Length Search
