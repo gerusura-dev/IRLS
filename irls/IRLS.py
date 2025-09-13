@@ -1,16 +1,14 @@
 from typing import List, Optional
-from .CodeTable import Record, CodeTable, NeighborType
-from .ConnectTable import ConnectTable
-from .Blobs import Blobs
+from irls.Tables.CodeTable import Run, CodeTable, NeighborType
+from irls.Tables.ConnectTable import ConnectTable
+from irls.Tables.Blobs import Blobs
 
 
 class IRLS:
-    def __init__(self, image: List[List[int]], neighbor: NeighborType = NeighborType.NEIGHBOR4, re_label: bool = True) -> None:
+    def __init__(self, image: List[List[int]], neighbor = NeighborType.NEIGHBOR4, re_label: bool = True) -> None:
         self.__neighbor = neighbor
         self.__image = image
-        self.__table = self.__search()
-        self.__labeling()
-        self.__blobs = Blobs(self.__table, re_label)
+        self.__blobs = self.__search(re_label)
 
     @property
     def blobs(self) -> Blobs:
@@ -23,38 +21,37 @@ class IRLS:
             print(f"    {line}")
         print()
 
-    def __search(self) -> CodeTable:
+    def __search(self, re_label: bool) -> Blobs:
         table = CodeTable(self.__neighbor)
         image = [[0] + run + [0] for run in self.__image]
 
-        record: Optional[Record] = None
+        record: Optional[Run] = None
 
         for y, run in enumerate(image):
             for x, (left, right) in enumerate(zip(run[:-1], run[1:])):
                 scan = left + right
                 if scan == 1:
                     if record:
+                        record.xe = x - 1
                         table.append(record)
                         record = None
                     else:
-                        record = Record(temp=len(table), y=y, xs=x, xe=x)
-                elif scan == 2:
-                    record.xe += 1
+                        record = Run(temp=len(table), y=y, xs=x, xe=x)
 
-        return table
+        return Blobs(self.__labeling(table), re_label)
 
-    def __labeling(self) -> None:
+    def __labeling(self, code_table: CodeTable) -> CodeTable:
         table = ConnectTable()
         latest = 0
 
-        def new_label(targets: List[Record]) -> None:
+        def new_label(targets: List[Run]) -> None:
             nonlocal latest
             for target in targets:
                 target.label = latest
                 latest += 1
 
-        for y in range(self.__table.max_y + 1):
-            records = self.__table.get_y(y)
+        for y in range(code_table.max_y + 1):
+            records = code_table.get_y(y)
 
             if not records:
                 continue
@@ -63,7 +60,7 @@ class IRLS:
                 new_label(records)
                 continue
 
-            pre_records = self.__table.get_y(y - 1)
+            pre_records = code_table.get_y(y - 1)
 
             if not pre_records:
                 new_label(records)
@@ -72,21 +69,24 @@ class IRLS:
             for record in records:
                 for pre_record in pre_records:
                     if pre_record.is_neighbor(record, self.__neighbor.dilation):
-                        if record.label == -1:
+                        if record.label is None:
                             record.label = pre_record.label
                         else:
                             table.append(record.label, pre_record.label)
                     else:
-                        if record.label == -1:
+                        if record.label is None:
                             new_label([record])
                             continue
 
-        self.__connect(table)
+        return self.__connect(code_table, table)
 
-    def __connect(self, connect: ConnectTable) -> None:
+    @staticmethod
+    def __connect(code_table: CodeTable, connect: ConnectTable) -> CodeTable:
         while len(connect):
             old, new = connect.pop()
-            for record in self.__table[old]:
+            for record in code_table[old]:
                 record.label = new
 
             connect.replace(old, new)
+
+        return code_table

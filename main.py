@@ -1,10 +1,10 @@
 from typing import List
-from irls import IRLS, NeighborType
+from irls import IRLS
 from test_data import TEST_IMG_DATA_6 as TEST_DATA
 
 
 def main(image: List[List[int]]) -> None:
-    irls = IRLS(image, NeighborType.NEIGHBOR4)
+    irls = IRLS(image)
     irls.op_image()
 
     data = irls.blobs

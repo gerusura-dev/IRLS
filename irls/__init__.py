@@ -1,2 +1,2 @@
 from .IRLS import IRLS
-from .CodeTable import NeighborType
+from irls.Tables.CodeTable import NeighborType
