@@ -1,17 +1,16 @@
 from typing import List, Optional
-from .Run import Run
-from .Rect import Rect
-from .Point import Point
+from irls.Types import Run, Rect, Point
 
 
 class Record:
-    __slots__ = ("label", "rect", "area", "cor")
+    __slots__ = ("label", "rect", "area", "cor", "cog")
 
     def __init__(self, runs: List[Run]) -> None:
         self.label: Optional[int] = runs[0].label if runs else None
         self.rect: Rect = self.__get_rect(runs)
         self.area: int = self.__get_area(runs)
         self.cor: Point = self.__get_center_of_rect(self.rect)
+        self.cog: Point = self.__get_center_of_gravity(runs)
 
     def __repr__(self) -> str:
         return f"Blob(label={self.label}, rect={self.rect}, area={self.area}, cor={self.cor})"
@@ -32,3 +31,7 @@ class Record:
     @staticmethod
     def __get_center_of_rect(rect: Rect) -> Point:
         return Point(rect.x + rect.w / 2, rect.y + rect.h / 2)
+
+    @staticmethod
+    def __get_center_of_gravity(runs: List[Run]) -> Point:
+        pass

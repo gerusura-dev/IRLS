@@ -5,7 +5,6 @@ from irls.Types import Run, NeighborType
 class CodeTable:
     def __init__(self, neighbor = NeighborType.NEIGHBOR4) -> None:
         self.neighbor = neighbor
-
         self.table: List[Run] = list()
 
     def __len__(self) -> int:
@@ -28,6 +27,10 @@ class CodeTable:
     @property
     def max_y(self) -> int:
         return max((run.y for run in self.table), default=0)
+
+    @property
+    def max_label(self) -> int:
+        return max((run.label for run in self.table), default=-1)
 
     def append(self, run: Run) -> None:
         self.table.append(run)

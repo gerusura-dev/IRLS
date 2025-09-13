@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Iterator
 from irls.Types import Joint
 
 
@@ -9,12 +9,9 @@ class ConnectTable:
     def __len__(self) -> int:
         return len(self.table)
 
+    def __iter__(self) -> Iterator[Joint]:
+        for joint in self.table:
+            yield joint
+
     def append(self, old: int, new: int) -> None:
         self.table.append(Joint(old, new))
-
-    def replace(self, old: int, new: int) -> None:
-        for record in self.table:
-            record.replace(old, new)
-
-    def pop(self) -> Joint:
-        return self.table.pop()
