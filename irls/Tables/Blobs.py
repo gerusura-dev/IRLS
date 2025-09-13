@@ -1,4 +1,4 @@
-from typing import List, Dict, Tuple, Iterator
+from typing import List, Dict, Tuple, Optional, Iterator
 from irls.Types import Run, Record
 from irls.Tables import CodeTable
 
@@ -14,8 +14,8 @@ class Blobs:
     def __repr__(self) -> str:
         return "\n".join(str(blob) for blob in self.record.values())
 
-    def __getitem__(self, label: int) -> Record:
-        return self.record.get(label, Record([]))
+    def __getitem__(self, label: int) -> Optional[Record]:
+        return self.record.get(label, None)
 
     def __iter__(self) -> Iterator[Tuple[int, Record]]:
         for item in self.record.items():

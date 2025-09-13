@@ -13,6 +13,9 @@ class IRLS:
         for record in self.blobs:
             yield record
 
+    def __getitem__(self, label: int) -> Optional[Record]:
+        return self.blobs[label]
+
     @property
     def blobs(self) -> Blobs:
         return self.__blobs
