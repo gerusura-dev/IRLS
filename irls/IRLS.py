@@ -1,60 +1,67 @@
-from typing import List, Optional
-from .CodeTable import Record, CodeTable, NeighborType
-from .ConnectTable import ConnectTable
-from .Blobs import Blobs
+from copy import deepcopy
+from typing import List, Tuple, Optional, Iterator
+from irls.Types import Image, Run, Record, NeighborType
+from irls.Tables import Blobs, CodeTable, ConnectTable, TransferTable
 
 
 class IRLS:
-    def __init__(self, image: List[List[int]], neighbor: NeighborType = NeighborType.NEIGHBOR4, re_label: bool = True) -> None:
+    def __init__(self, image: List[List[int]], neighbor = NeighborType.NEIGHBOR4) -> None:
         self.__neighbor = neighbor
-        self.__image = image
-        self.__table = self.__search()
-        self.__labeling()
-        self.__blobs = Blobs(self.__table, re_label)
+        self.__blobs, self.__image = self.__search(deepcopy(image))
+
+    def __iter__(self) -> Iterator[Tuple[int, Record]]:
+        for record in self.blobs:
+            yield record
+
+    def __getitem__(self, label: int) -> Optional[Record]:
+        return self.blobs[label]
 
     @property
     def blobs(self) -> Blobs:
         return self.__blobs
 
-    def op_image(self) -> None:
-        print()
-        for run in self.__image:
-            line = "".join(map(str, run)).replace("0", "⬛️").replace("1", "⬜️")
-            print(f"    {line}")
-        print()
+    @property
+    def image(self) -> Image:
+        return self.__image
 
-    def __search(self) -> CodeTable:
+    def __get_image(self):
+        pass
+
+    def __search(self, image_org: List[List[int]]) -> Tuple[Blobs, Image]:
         table = CodeTable(self.__neighbor)
-        image = [[0] + run + [0] for run in self.__image]
+        image = [[0] + run + [0] for run in image_org]
 
-        record: Optional[Record] = None
+        record: Optional[Run] = None
 
         for y, run in enumerate(image):
             for x, (left, right) in enumerate(zip(run[:-1], run[1:])):
-                scan = left + right
-                if scan == 1:
-                    if record:
+                if left + right == 1:
+                    if record is not None:
+                        record.xe = x - 1
                         table.append(record)
                         record = None
                     else:
-                        record = Record(temp=len(table), y=y, xs=x, xe=x)
-                elif scan == 2:
-                    record.xe += 1
+                        record = Run(temp=len(table), y=y, xs=x, xe=-1)
 
-        return table
+        self.__labeling(table)
 
-    def __labeling(self) -> None:
+        for run in table:
+            image_org[run.y][run.xs:run.xe + 1] = [run.label for _ in range(len(run))]
+
+        return Blobs(table), Image(image_org)
+
+    def __labeling(self, code_table: CodeTable) -> None:
         table = ConnectTable()
-        latest = 0
+        latest = 1
 
-        def new_label(targets: List[Record]) -> None:
+        def new_label(targets: List[Run]) -> None:
             nonlocal latest
             for target in targets:
                 target.label = latest
                 latest += 1
 
-        for y in range(self.__table.max_y + 1):
-            records = self.__table.get_y(y)
+        for y in range(code_table.max_y + 1):
+            records = code_table.get_y(y)
 
             if not records:
                 continue
@@ -63,7 +70,7 @@ class IRLS:
                 new_label(records)
                 continue
 
-            pre_records = self.__table.get_y(y - 1)
+            pre_records = code_table.get_y(y - 1)
 
             if not pre_records:
                 new_label(records)
@@ -72,21 +79,23 @@ class IRLS:
             for record in records:
                 for pre_record in pre_records:
                     if pre_record.is_neighbor(record, self.__neighbor.dilation):
-                        if record.label == -1:
+                        if record.label is None:
                             record.label = pre_record.label
                         else:
                             table.append(record.label, pre_record.label)
                     else:
-                        if record.label == -1:
+                        if record.label is None:
                             new_label([record])
                             continue
 
-        self.__connect(table)
+        self.__connect(code_table, table)
 
-    def __connect(self, connect: ConnectTable) -> None:
-        while len(connect):
-            old, new = connect.pop()
-            for record in self.__table[old]:
-                record.label = new
+    @staticmethod
+    def __connect(code_table: CodeTable, connect: ConnectTable) -> None:
+        table = TransferTable(code_table.max_label)
 
-            connect.replace(old, new)
+        for old, new in connect:
+            table.append(old, new)
+
+        for run in code_table:
+            run.label = table[run.label]

@@ -1,2 +1,2 @@
 from .IRLS import IRLS
-from .CodeTable import NeighborType
+from irls.Types import NeighborType, Image
